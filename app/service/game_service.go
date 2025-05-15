@@ -2,34 +2,47 @@ package service
 
 import (
 	models "ludo_backend/models/game_models"
-	"math/rand"
 )
 
 type GameService struct {
-	Game models.Game
 }
 
-func (gameService *GameService) CreateGame(roomId string, uid string) models.Game {
-	gameService.Game.GameID = roomId + "_"+ uid
-	gameService.Game.RoomUd = roomId
-	gameService.Game.CurrentPlayer = 0
-
-	// Initialize players
-	players := []models.Player{
-		{Uid: uid, PlayerId: 0, Color: "red", Pawns: []models.Pawn{{Id: 1, Color: "red", Position: 0}}},
+func (gameService GameService) CreateGame(roomId string, creator string, uids []string) models.Game {
+	var game models.Game
+	game.GameID = roomId + "_"+ creator
+	game.RoomUd = roomId
+	game.CurrentPlayer = 0
+	var players []models.Player
+	for index, uid := range uids {
+		player := models.Player{
+			Uid: uid,
+			PlayerId: index,
+			Color: getColor(index),
+			Pawns: []models.Pawn{
+				{Id: 0, Color: getColor(index), Position: -1},
+				{Id: 1, Color: getColor(index), Position: -1},
+				{Id: 2, Color: getColor(index), Position: -1},
+				{Id: 3, Color: getColor(index), Position: -1},
+			},
+		}
+		players = append(players, player)
 	}
-
-	gameService.Game.Board = models.Board{Players: players}
-	return gameService.Game
+	game.Board = models.Board{Players: players}
+	return game
 }
 
-func (service GameService) DiceRoll() int {
-	service.Game.CurrentPlayer = (service.Game.CurrentPlayer + 1) % 4
-	return rand.Intn(6) + 1
-}
 
-func (service GameService) MovePawn(pawnPosition int, diceValue int) int {
-	newPosition := pawnPosition + diceValue
-	return newPosition
+func getColor(playerId int) string {
+	switch playerId {
+	case 0:
+		return "red"
+	case 1:
+		return "green"
+	case 2:
+		return "blue"
+	case 3:
+		return "yellow"
+	default:
+		return ""
+	}
 }
-

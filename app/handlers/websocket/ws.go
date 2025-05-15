@@ -1,13 +1,13 @@
 package websocket
 
 import (
-	"log"
+	models "ludo_backend/models/game_models"
 	"net/http"
 
-	"github.com/gorilla/websocket"
 	"fmt"
-)
 
+	"github.com/gorilla/websocket"
+)
 
 type Client struct {
 	ID   string
@@ -17,12 +17,12 @@ type Client struct {
 type Room struct {
 	ID      string
 	Clients map[string]*Client
+	Game    models.Game
 }
 
 var clients = make(map[string]*Client)
 var Rooms = make(map[string]*Room)
 var client_rooms = make(map[string]string) // clientId : roomId
-
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
@@ -45,6 +45,11 @@ func HandleWebsockets(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer func() {
+		conn.Close()
+		delete(Rooms[client_rooms[userId]].Clients, userId)
+		delete(client_rooms, userId)
+		delete(clients, userId)
+
 		for _, c := range Rooms[client_rooms[userId]].Clients {
 			c.Conn.WriteJSON(map[string]interface{}{
 				"message": "User disconnected",
@@ -52,14 +57,6 @@ func HandleWebsockets(w http.ResponseWriter, r *http.Request) {
 				"users":   len(Rooms[client_rooms[userId]].Clients),
 			})
 		}
-		
-		delete(Rooms[client_rooms[userId]].Clients, userId)
-		delete(client_rooms, userId)
-		delete(clients, userId)
-		conn.Close()
-
-	
-		log.Printf("Client disconnected: %s", userId)
 	}()
 
 	// Create a new client
