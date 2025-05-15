@@ -2,15 +2,20 @@ package websocket
 
 import (
 	"log"
-	game_constants "ludo_backend/utils/constants"
+	"ludo_backend/app/repository"
 	services "ludo_backend/app/service"
+	"ludo_backend/database"
+	game_constants "ludo_backend/utils/constants"
 	"net/http"
 
 	"github.com/gorilla/websocket"
 )
 
 func HandleGameWebSocket(w http.ResponseWriter, r *http.Request, client *Client) {
-	gameService := &services.GameService{}
+	db := database.MongoClient.Database("ludo")
+	gameRepo := repository.NewGameRepository(db)
+	gameService := services.NewGameService(gameRepo)
+
 	var room *Room
 	if client_rooms[client.ID] != "" {
 		room = Rooms[client_rooms[client.ID]]
@@ -30,7 +35,17 @@ func HandleGameWebSocket(w http.ResponseWriter, r *http.Request, client *Client)
 		userIds = append(userIds, id)
 	}
 	if len(room.Clients) == game_constants.MaxPlayers {
-		game := gameService.CreateGame(room.ID, client.ID, userIds)
+		game, err := gameService.CreateGame(room.ID, client.ID, userIds)
+		if err != nil {
+			for _, c := range room.Clients {
+				c.Conn.WriteJSON(map[string]interface{}{
+					"message": "Error creating game: " + err.Error(),
+					"roomId":  room.ID,
+				})
+				return
+			}
+		}
+
 		room.Game = game
 		for _, c := range room.Clients {
 			c.Conn.WriteJSON(map[string]interface{}{

@@ -2,12 +2,21 @@ package service
 
 import (
 	models "ludo_backend/models/game_models"
+	"ludo_backend/app/repository"
 )
 
 type GameService struct {
+	GameRepo *repository.GameRepository
 }
 
-func (gameService GameService) CreateGame(roomId string, creator string, uids []string) models.Game {
+func NewGameService(gameRepo *repository.GameRepository) *GameService {
+	return &GameService{
+		GameRepo: gameRepo,
+	}
+}
+
+
+func (service GameService) CreateGame(roomId string, creator string, uids []string) (models.Game, error) {
 	var game models.Game
 	game.GameID = roomId + "_"+ creator
 	game.RoomUd = roomId
@@ -28,9 +37,9 @@ func (gameService GameService) CreateGame(roomId string, creator string, uids []
 		players = append(players, player)
 	}
 	game.Board = models.Board{Players: players}
-	return game
+	err := service.GameRepo.CreateGame(game)
+	return game, err
 }
-
 
 func getColor(playerId int) string {
 	switch playerId {

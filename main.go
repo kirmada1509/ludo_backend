@@ -7,12 +7,13 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"ludo_backend/app/handlers/websocket"
-	"ludo_backend/db"
+	"ludo_backend/database"
 )
 
 func main() {
-	db.InitMongoDB("mongodb://localhost:27017")
-	
+	database.InitMongoDB("mongodb://localhost:27017")
+	// db := database.MongoClient.Database("ludo")
+
 	r := gin.Default()
 
 	r.GET("/ws", func(c *gin.Context) {

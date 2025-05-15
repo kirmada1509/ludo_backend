@@ -2,6 +2,7 @@ package websocket
 
 import (
 	models "ludo_backend/models/game_models"
+	game_constants "ludo_backend/utils/constants"
 	"net/http"
 
 	"fmt"
@@ -70,7 +71,7 @@ func HandleWebsockets(w http.ResponseWriter, r *http.Request) {
 
 func getAvailableRoom(Rooms map[string]*Room, client *Client) *Room {
 	for _, room := range Rooms {
-		if len(room.Clients) < 4 {
+		if len(room.Clients) < game_constants.MaxPlayers {
 			return room
 		}
 	}
