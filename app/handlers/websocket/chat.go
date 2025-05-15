@@ -1,4 +1,4 @@
-package ws
+package websocket
 
 import (
 	"log"
@@ -7,21 +7,9 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type Client struct {
-	ID   string
-	Conn *websocket.Conn
-}
 
-type Room struct {
-	ID      int
-	Clients []*Client
-}
 
-var clients = make(map[string]*Client)
-var Rooms = []*Room{}
-var client_rooms = make(map[string]int)
-
-func HandleGameWebSocket(w http.ResponseWriter, r *http.Request) {
+func HandleChatWebsocket(w http.ResponseWriter, r *http.Request) {
 
 	userId := r.URL.Query().Get("userId")
 	if userId == "" {
@@ -49,20 +37,7 @@ func HandleGameWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	clients[userId] = client
 
-	var room *Room
-	if client_rooms[userId] == 0 {
-		room = getAvailableRoom()
-		if room == nil {
-			room = &Room{
-				ID:      len(Rooms) + 1,
-				Clients: []*Client{},
-			}
-			Rooms = append(Rooms, room)
-		}
-		room.Clients = append(room.Clients, client)
-	}else {
-		room = Rooms[client_rooms[userId]]
-	}
+	room := getAvailableRoom(Rooms, client)
 
 	client.Conn.WriteJSON(map[string]interface{}{
 		"roomId": room.ID,
@@ -83,13 +58,4 @@ func HandleGameWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	}
 
-}
-
-func getAvailableRoom() *Room {
-	for _, room := range Rooms {
-		if len(room.Clients) < 4 {
-			return room
-		}
-	}
-	return nil
 }
