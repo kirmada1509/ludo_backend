@@ -2,20 +2,12 @@ package websocket
 
 import (
 	"log"
-	"ludo_backend/app/repository"
-	services "ludo_backend/app/service"
-	"ludo_backend/database"
+	models "ludo_backend/models/game_models"
 	game_constants "ludo_backend/utils/constants"
-	"net/http"
-
-	"github.com/gorilla/websocket"
 )
 
-func HandleGameWebSocket(w http.ResponseWriter, r *http.Request, client *Client) {
-	db := database.MongoClient.Database("ludo")
-	gameRepo := repository.NewGameRepository(db)
-	gameService := services.NewGameService(gameRepo)
 
+func (handler WebsocketHandler) HandleRoomJoin(client *Client) {
 	var room *Room
 	if client_rooms[client.ID] != "" {
 		room = Rooms[client_rooms[client.ID]]
@@ -35,7 +27,8 @@ func HandleGameWebSocket(w http.ResponseWriter, r *http.Request, client *Client)
 		userIds = append(userIds, id)
 	}
 	if len(room.Clients) == game_constants.MaxPlayers {
-		game, err := gameService.CreateGame(room.ID, client.ID, userIds)
+
+		game, err := handler.GameService.CreateGame(room.ID, client.ID, userIds)
 		if err != nil {
 			for _, c := range room.Clients {
 				c.Conn.WriteJSON(map[string]interface{}{
@@ -47,13 +40,6 @@ func HandleGameWebSocket(w http.ResponseWriter, r *http.Request, client *Client)
 		}
 
 		room.Game = game
-		for _, c := range room.Clients {
-			c.Conn.WriteJSON(map[string]interface{}{
-				"message": "Game is starting!",
-				"roomId":  room.ID,
-			})
-		}
-
 		for _, c := range room.Clients {
 			c.Conn.WriteJSON(map[string]interface{}{
 				"message": "Game Started!",
@@ -70,17 +56,25 @@ func HandleGameWebSocket(w http.ResponseWriter, r *http.Request, client *Client)
 			"users":   len(room.Clients),
 		})
 	}
+}
 
-	for {
-		_, msg, err := client.Conn.ReadMessage()
-		if err != nil {
-			log.Println("Error reading message:", err)
-			client.Conn.WriteMessage(websocket.TextMessage, []byte("Error reading message"+err.Error()))
-			break
-		}
 
-		for _, c := range room.Clients {
-			c.Conn.WriteMessage(websocket.TextMessage, msg)
-		}
+func (handler WebsocketHandler) HandlePawnMovement(pawnMovement models.PawnMovementRequest) {
+	pawnMovementResponse, err := handler.GameService.HandlePawnMovement(pawnMovement)
+	if err != nil {
+		log.Println("Error handling pawn movement:", err)
+	}
+	game, err := handler.GameRepo.GetGameById(pawnMovement.GameId)
+	if err != nil {
+		log.Println("Error getting game by ID:", err)
+		return
+	}
+	
+	for _, c := range Rooms[client_rooms[pawnMovement.GameId]].Clients {
+		c.Conn.WriteJSON(map[string]interface{}{
+			"event": "pawn_movement",
+			"movement": pawnMovementResponse,
+			"board": game.Board,
+		})
 	}
 }

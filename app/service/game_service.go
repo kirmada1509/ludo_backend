@@ -1,8 +1,10 @@
 package service
 
 import (
-	models "ludo_backend/models/game_models"
+	"fmt"
 	"ludo_backend/app/repository"
+	models "ludo_backend/models/game_models"
+	helpers "ludo_backend/utils/helpers"
 )
 
 type GameService struct {
@@ -15,23 +17,23 @@ func NewGameService(gameRepo *repository.GameRepository) *GameService {
 	}
 }
 
-
 func (service GameService) CreateGame(roomId string, creator string, uids []string) (models.Game, error) {
 	var game models.Game
-	game.GameID = roomId + "_"+ creator
-	game.RoomUd = roomId
+	game.GameID = roomId + "_" + creator
+	game.RoomId = roomId
 	game.CurrentPlayer = 0
+	game.DiceResult = 3
 	var players []models.Player
 	for index, uid := range uids {
 		player := models.Player{
-			Uid: uid,
+			Uid:      uid,
 			PlayerId: index,
-			Color: getColor(index),
+			Color:    helpers.GetColor(index),
 			Pawns: []models.Pawn{
-				{Id: 0, Color: getColor(index), Position: -1},
-				{Id: 1, Color: getColor(index), Position: -1},
-				{Id: 2, Color: getColor(index), Position: -1},
-				{Id: 3, Color: getColor(index), Position: -1},
+				{Id: 0, Color: helpers.GetColor(index), Position: 0},
+				{Id: 1, Color: helpers.GetColor(index), Position: 0},
+				{Id: 2, Color: helpers.GetColor(index), Position: 0},
+				{Id: 3, Color: helpers.GetColor(index), Position: 0},
 			},
 		}
 		players = append(players, player)
@@ -41,17 +43,33 @@ func (service GameService) CreateGame(roomId string, creator string, uids []stri
 	return game, err
 }
 
-func getColor(playerId int) string {
-	switch playerId {
-	case 0:
-		return "red"
-	case 1:
-		return "green"
-	case 2:
-		return "blue"
-	case 3:
-		return "yellow"
-	default:
-		return ""
+func (service GameService) GetGameById(gameId string) (models.Game, error) {
+	game, err := service.GameRepo.GetGameById(gameId)
+	if err != nil {
+		return models.Game{}, err
 	}
+	return game, nil
+}
+
+
+func (service GameService) HandlePawnMovement(pawnMovement models.PawnMovementRequest)  (models.PawnMovementResponse, error) {
+	game, err := service.GameRepo.GetGameById(pawnMovement.GameId)
+	var pawnMovementResponse models.PawnMovementResponse
+	if err != nil {
+		return pawnMovementResponse, err
+	}
+	
+	if(game.CurrentPlayer != pawnMovement.PlayerId){
+		return pawnMovementResponse, fmt.Errorf("it's not your turn")
+	}
+	currentPawnPosition := game.Board.Players[pawnMovement.PlayerId].Pawns[pawnMovement.PawnId].Position
+	err = service.GameRepo.MovePawm(pawnMovement, currentPawnPosition + game.DiceResult)
+	if err != nil {
+		return pawnMovementResponse, err
+	}
+	pawnMovementResponse.GameId = pawnMovement.GameId
+	pawnMovementResponse.PlayerId = pawnMovement.PlayerId
+	pawnMovementResponse.PawnId = pawnMovement.PawnId
+	pawnMovementResponse.Position = currentPawnPosition + game.DiceResult
+	return pawnMovementResponse, nil
 }

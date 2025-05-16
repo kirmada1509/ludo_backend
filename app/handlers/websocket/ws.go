@@ -1,6 +1,11 @@
 package websocket
 
 import (
+	"encoding/json"
+	"log"
+	"ludo_backend/app/repository"
+	services "ludo_backend/app/service"
+	"ludo_backend/database"
 	models "ludo_backend/models/game_models"
 	game_constants "ludo_backend/utils/constants"
 	"net/http"
@@ -8,7 +13,13 @@ import (
 	"fmt"
 
 	"github.com/gorilla/websocket"
+	"go.mongodb.org/mongo-driver/mongo"
 )
+
+type WSMessage struct {
+	Action  string          `json:"action"`
+	Payload json.RawMessage `json:"payload"`
+}
 
 type Client struct {
 	ID   string
@@ -31,7 +42,22 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func HandleWebsockets(w http.ResponseWriter, r *http.Request) {
+type WebsocketHandler struct {
+	Db          *mongo.Database
+	GameRepo    *repository.GameRepository
+	GameService *services.GameService
+}
+
+func NewWebsocketHandler(db *mongo.Database) *WebsocketHandler {
+	return &WebsocketHandler{
+		Db:          db,
+		GameRepo:    repository.NewGameRepository(db),
+		GameService: services.NewGameService(repository.NewGameRepository(db)),
+	}
+}
+
+func InitWebsockets(w http.ResponseWriter, r *http.Request) {
+	WsHandler := NewWebsocketHandler(database.MongoClient.Database("ludo"))
 	userId := r.URL.Query().Get("userId")
 	if userId == "" {
 		http.Error(w, "userId is required", http.StatusBadRequest)
@@ -60,13 +86,43 @@ func HandleWebsockets(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	// Create a new client
 	client := &Client{
 		ID:   userId,
 		Conn: conn,
 	}
 	clients[userId] = client
-	HandleGameWebSocket(w, r, client)
+
+	for {
+		_, raw, err := conn.ReadMessage()
+		if err != nil {
+			log.Println("ReadMessage error:", err)
+			break
+		}
+		
+		var msg WSMessage
+		if err := json.Unmarshal(raw, &msg); err != nil {
+			log.Println("Unmarshal error:", err)
+			conn.WriteJSON(map[string]string{"error": "invalid message format"})
+			continue
+		}
+
+		switch msg.Action {
+		case "join":
+			WsHandler.HandleRoomJoin(client)
+		case "move":
+			var pawnMovement models.PawnMovementRequest
+			if err := json.Unmarshal([]byte(msg.Payload), &pawnMovement); err != nil {
+				conn.WriteJSON(map[string]interface{}{"error": "Invalid payload"})
+				continue
+			}
+			WsHandler.HandlePawnMovement(pawnMovement)
+		default:
+			log.Println("Unknown action:", msg.Action)
+			conn.WriteJSON(map[string]interface{}{
+				"message": fmt.Sprint("Unknown action", msg.Action),
+			})
+		}
+	}
 }
 
 func getAvailableRoom(Rooms map[string]*Room, client *Client) *Room {
