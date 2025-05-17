@@ -1,5 +1,7 @@
 package helpers
 
+import "math/rand"
+
 
 func GetColor(playerId int) string {
 	switch playerId {
@@ -14,4 +16,8 @@ func GetColor(playerId int) string {
 	default:
 		return ""
 	}
+}
+
+func RollDice() int {
+	return 1 + rand.Intn(6)
 }

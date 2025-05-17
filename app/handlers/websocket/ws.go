@@ -110,6 +110,12 @@ func InitWebsockets(w http.ResponseWriter, r *http.Request) {
 		switch msg.Action {
 		case "join":
 			WsHandler.HandleRoomJoin(client)
+		case "dice_roll":
+			var DiceRollRequest models.DiceRollRequest
+			if err := json.Unmarshal([]byte(msg.Payload), &DiceRollRequest); err != nil {
+				conn.WriteJSON(map[string]interface{}{"error": "Invalid payload"})
+			}
+			WsHandler.HandleDiceRoll(DiceRollRequest)
 		case "move":
 			var pawnMovement models.PawnMovementRequest
 			if err := json.Unmarshal([]byte(msg.Payload), &pawnMovement); err != nil {
@@ -117,6 +123,7 @@ func InitWebsockets(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			WsHandler.HandlePawnMovement(pawnMovement)
+
 		default:
 			log.Println("Unknown action:", msg.Action)
 			conn.WriteJSON(map[string]interface{}{

@@ -36,7 +36,7 @@ func (repo GameRepository) GetGameById(gameId string) (models.Game, error) {
 	}
 	return game, nil
 }
-
+//TODO: Remove this and use UpdateGame()
 func (repo GameRepository) MovePawm(pawnMovement models.PawnMovementRequest, diceResult int) error {
 	filter := map[string]interface{}{"game_id": pawnMovement.GameId}
 	update := map[string]interface{}{
@@ -58,4 +58,19 @@ func (repo GameRepository) GetPawn(gameId string, playerId int, pawnId int) (mod
 		return models.Pawn{}, err
 	}
 	return game.Board.Players[playerId].Pawns[pawnId], nil
+}
+
+func (repo GameRepository) UpdateGame(game models.Game) (models.Game, error) {
+	// Update the game in the database
+	var updatedGame models.Game
+	result := repo.db.Collection("games").FindOneAndUpdate(
+		context.TODO(),
+		map[string]interface{}{"game_id": game.GameID},
+		map[string]interface{}{"$set": game},
+	)
+	err := result.Decode(&updatedGame)
+	if err != nil {
+		return updatedGame, err
+	}
+	return updatedGame, nil
 }

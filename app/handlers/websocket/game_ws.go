@@ -6,7 +6,6 @@ import (
 	game_constants "ludo_backend/utils/constants"
 )
 
-
 func (handler WebsocketHandler) HandleRoomJoin(client *Client) {
 	var room *Room
 	if client_rooms[client.ID] != "" {
@@ -17,17 +16,11 @@ func (handler WebsocketHandler) HandleRoomJoin(client *Client) {
 		room.Clients[client.ID] = client
 	}
 
-	client.Conn.WriteJSON(map[string]interface{}{
-		"message": "Welcome to the game room!",
-		"roomId":  room.ID,
-		"users":   len(room.Clients),
-	})
-	var userIds []string
-	for id := range room.Clients {
-		userIds = append(userIds, id)
-	}
 	if len(room.Clients) == game_constants.MaxPlayers {
-
+		var userIds []string
+		for id := range room.Clients {
+			userIds = append(userIds, id)
+		}
 		game, err := handler.GameService.CreateGame(room.ID, client.ID, userIds)
 		if err != nil {
 			for _, c := range room.Clients {
@@ -59,23 +52,36 @@ func (handler WebsocketHandler) HandleRoomJoin(client *Client) {
 	}
 }
 
+func (handler WebsocketHandler) HandleDiceRoll(DiceRollRequest models.DiceRollRequest) {
+	diceResult, err := handler.GameService.HandleDiceRoll(DiceRollRequest)
+	if err != nil {
+		log.Println("Error handling dice roll:", err)
+		clients[DiceRollRequest.UserId].Conn.WriteJSON(map[string]interface{}{
+			"success": false,
+			"message": "Error handling dice roll: " + err.Error(),
+		})
+		return
+	}
+
+	for _, c := range Rooms[game_rooms[DiceRollRequest.GameId]].Clients {
+		c.Conn.WriteJSON(map[string]interface{}{
+			"success":     true,
+			"event":       "dice_roll",
+			"dice_result": diceResult,
+		})
+	}
+}
 
 func (handler WebsocketHandler) HandlePawnMovement(pawnMovement models.PawnMovementRequest) {
 	pawnMovementResponse, err := handler.GameService.HandlePawnMovement(pawnMovement)
 	if err != nil {
 		log.Println("Error handling pawn movement:", err)
 	}
-	game, err := handler.GameRepo.GetGameById(pawnMovement.GameId)
-	if err != nil {
-		log.Println("Error getting game by ID:", err)
-		return
-	}
-	
+
 	for _, c := range Rooms[game_rooms[pawnMovement.GameId]].Clients {
 		c.Conn.WriteJSON(map[string]interface{}{
-			"event": "pawn_movement",
+			"event":    "pawn_movement",
 			"movement": pawnMovementResponse,
-			"board": game.Board,
 		})
 	}
 }

@@ -35,3 +35,9 @@ type PawnMovementResponse struct {
 	PawnId int    `json:"pawn_id" bson:"pawn_id"`
 	Position int    `json:"position" bson:"position"`
 }
+
+type DiceRollRequest struct {
+	UserId string `json:"user_id" bson:"user_id"`
+	GameId string `json:"game_id" bson:"game_id"`
+	PlayerId int `json:"player_id" bson:"player_id"`
+}
