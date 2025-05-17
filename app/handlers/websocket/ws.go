@@ -35,6 +35,7 @@ type Room struct {
 var clients = make(map[string]*Client)
 var Rooms = make(map[string]*Room)
 var client_rooms = make(map[string]string) // clientId : roomId
+var game_rooms = make(map[string]string)   // gameId : roomId
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {

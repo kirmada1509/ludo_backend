@@ -40,6 +40,7 @@ func (handler WebsocketHandler) HandleRoomJoin(client *Client) {
 		}
 
 		room.Game = game
+		game_rooms[game.GameID] = room.ID
 		for _, c := range room.Clients {
 			c.Conn.WriteJSON(map[string]interface{}{
 				"message": "Game Started!",
@@ -70,7 +71,7 @@ func (handler WebsocketHandler) HandlePawnMovement(pawnMovement models.PawnMovem
 		return
 	}
 	
-	for _, c := range Rooms[client_rooms[pawnMovement.GameId]].Clients {
+	for _, c := range Rooms[game_rooms[pawnMovement.GameId]].Clients {
 		c.Conn.WriteJSON(map[string]interface{}{
 			"event": "pawn_movement",
 			"movement": pawnMovementResponse,
