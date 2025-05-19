@@ -1,3 +1,3 @@
 package game_constants
 
-var MaxPlayers = 2
+var MaxPlayers = 1

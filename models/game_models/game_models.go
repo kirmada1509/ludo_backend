@@ -41,3 +41,10 @@ type DiceRollRequest struct {
 	GameId string `json:"game_id" bson:"game_id"`
 	PlayerId int `json:"player_id" bson:"player_id"`
 }
+
+type ChatMessage struct {
+	UserId string `json:"user_id" bson:"user_id"`
+	Message string `json:"message" bson:"message"`
+	GameId string `json:"game_id" bson:"game_id"`
+	PlayerId int `json:"player_id" bson:"player_id"`
+}

@@ -7,14 +7,9 @@ import (
 )
 
 func (handler WebsocketHandler) HandleRoomJoin(client *Client) {
-	var room *Room
-	if client_rooms[client.ID] != "" {
-		room = Rooms[client_rooms[client.ID]]
-	} else {
-		room = getAvailableRoom(Rooms, client)
-		client_rooms[client.ID] = room.ID
-		room.Clients[client.ID] = client
-	}
+	room := getAvailableRoom(Rooms, client)
+	client_rooms[client.ID] = room.ID
+	room.Clients[client.ID] = client
 
 	if len(room.Clients) == game_constants.MaxPlayers {
 		var userIds []string
@@ -39,15 +34,18 @@ func (handler WebsocketHandler) HandleRoomJoin(client *Client) {
 				"message": "Game Started!",
 				"roomId":  room.ID,
 				"game":    game,
-				"users":   len(room.Clients),
 			})
 		}
 
 	} else {
+		playerNames := make([]string, 0)
+		for id := range room.Clients {
+			playerNames = append(playerNames, id)
+		}
 		client.Conn.WriteJSON(map[string]interface{}{
-			"message": "Waiting for more players to join...",
+			"message": "Waiting...",
 			"roomId":  room.ID,
-			"users":   len(room.Clients),
+			"players": playerNames,
 		})
 	}
 }
@@ -55,9 +53,9 @@ func (handler WebsocketHandler) HandleRoomJoin(client *Client) {
 func (handler WebsocketHandler) HandleDiceRoll(DiceRollRequest models.DiceRollRequest) {
 	diceResult, err := handler.GameService.HandleDiceRoll(DiceRollRequest)
 	if err != nil {
-		log.Println("Error handling dice roll:", err)
 		clients[DiceRollRequest.UserId].Conn.WriteJSON(map[string]interface{}{
 			"success": false,
+			"event":   "dice_roll",
 			"message": "Error handling dice roll: " + err.Error(),
 		})
 		return

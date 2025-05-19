@@ -123,7 +123,23 @@ func InitWebsockets(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			WsHandler.HandlePawnMovement(pawnMovement)
+		case "chat":
+			var chatMessage models.ChatMessage
+			if err := json.Unmarshal([]byte(msg.Payload), &chatMessage); err != nil {
+				conn.WriteJSON(map[string]interface{}{"error": "Invalid payload"})
+				continue
+			}
 
+			for _, c := range Rooms[client_rooms[chatMessage.UserId]].Clients {
+				c.Conn.WriteJSON(map[string]interface{}{
+					"event":   "chat",
+					"message": chatMessage.Message,
+					"userId":  chatMessage.UserId,
+					"gameId":  chatMessage.GameId,
+					"playerId": chatMessage.PlayerId,
+				})
+			}
+			
 		default:
 			log.Println("Unknown action:", msg.Action)
 			conn.WriteJSON(map[string]interface{}{
