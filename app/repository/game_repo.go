@@ -5,6 +5,7 @@ import (
 	"fmt"
 	models "ludo_backend/models/game_models"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -36,20 +37,6 @@ func (repo GameRepository) GetGameById(gameId string) (models.Game, error) {
 	}
 	return game, nil
 }
-//TODO: Remove this and use UpdateGame()
-func (repo GameRepository) MovePawm(pawnMovement models.PawnMovementRequest, diceResult int) error {
-	filter := map[string]interface{}{"game_id": pawnMovement.GameId}
-	update := map[string]interface{}{
-	"$set": map[string]interface{}{
-		fmt.Sprintf("board.players.%d.pawns.%d.position", pawnMovement.PlayerId, pawnMovement.PawnId): diceResult,
-	}}
-
-	_, err := repo.db.Collection("games").UpdateOne(context.TODO(), filter, update)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
 func (repo GameRepository) GetPawn(gameId string, playerId int, pawnId int) (models.Pawn, error) {
 	var game models.Game
@@ -61,16 +48,16 @@ func (repo GameRepository) GetPawn(gameId string, playerId int, pawnId int) (mod
 }
 
 func (repo GameRepository) UpdateGame(game models.Game) (models.Game, error) {
-	// Update the game in the database
-	var updatedGame models.Game
-	result := repo.db.Collection("games").FindOneAndUpdate(
-		context.TODO(),
-		map[string]interface{}{"game_id": game.GameID},
-		map[string]interface{}{"$set": game},
-	)
-	err := result.Decode(&updatedGame)
+	// Replace the entire game document in MongoDB
+	filter := bson.M{"game_id": game.GameID}
+	_, err := repo.db.Collection("games").ReplaceOne(context.TODO(), filter, game)
 	if err != nil {
-		return updatedGame, err
+		return models.Game{}, err
 	}
-	return updatedGame, nil
+	updated, err := repo.GetGameById(game.GameID)
+	if err != nil {
+		return models.Game{}, err
+	}
+	fmt.Println("Updated game:", updated)
+	return updated, nil
 }

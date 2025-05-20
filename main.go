@@ -3,14 +3,18 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
+	"time"
+
+	"ludo_backend/app/handlers/websocket"
 
 	"github.com/gin-gonic/gin"
-	"ludo_backend/app/handlers/websocket"
 
 	"ludo_backend/database"
 )
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
 	database.InitMongoDB("mongodb://localhost:27017")
 	// db := database.MongoClient.Database("ludo")
 	r := gin.Default()

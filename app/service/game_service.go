@@ -22,7 +22,7 @@ func (service GameService) CreateGame(roomId string, creator string, uids []stri
 	game.GameID = roomId + "_" + creator
 	game.RoomId = roomId
 	game.CurrentPlayer = 0
-	game.DiceResult = 3
+	game.DiceResult = 0
 	var players []models.Player
 	for index, uid := range uids {
 		player := models.Player{
@@ -39,6 +39,7 @@ func (service GameService) CreateGame(roomId string, creator string, uids []stri
 		players = append(players, player)
 	}
 	game.Board = models.Board{Players: players}
+	game.AllowMovement = false
 	err := service.GameRepo.CreateGame(game)
 	return game, err
 }
@@ -56,15 +57,20 @@ func (service GameService) HandleDiceRoll(diceRoll models.DiceRollRequest) (int,
 	if err != nil {
 		return 0, err
 	}
+	if game.AllowMovement {
+		return 0, fmt.Errorf("you have already rolled the dice")
+	}
 	if game.CurrentPlayer != diceRoll.PlayerId {
 		return 0, fmt.Errorf("it's not your turn")
 	}
-	game.DiceResult = helpers.RollDice()
+	diceResult := helpers.RollDice()
+	game.DiceResult = diceResult
+	game.AllowMovement = true
 	game, err = service.GameRepo.UpdateGame(game)
 	if err != nil {
 		return 0, err
 	}
-	return game.DiceResult, err
+	return diceResult, nil
 }
 
 func (service GameService) HandlePawnMovement(req models.PawnMovementRequest) (models.PawnMovementResponse, error) {
@@ -75,29 +81,28 @@ func (service GameService) HandlePawnMovement(req models.PawnMovementRequest) (m
 	}
 
 	if game.CurrentPlayer != req.PlayerId {
-		return res, fmt.Errorf("it's not your turn")
+		return res, fmt.Errorf("it's not your turn, current player is %d", game.CurrentPlayer)
 	}
 
-	player := game.Board.Players[req.PlayerId]
-	pawn := player.Pawns[req.PawnId]
-	currentPawnPosition := pawn.Position
-	newPosition := currentPawnPosition + game.DiceResult
+	pawn := &game.Board.Players[req.PlayerId].Pawns[req.PawnId]
+	pawn.Position += game.DiceResult
 
-	err = service.GameRepo.MovePawm(req, newPosition)
-	if err != nil {
-		return res, err
-	}
-
+	game.AllowMovement = false
 	game.CurrentPlayer = (game.CurrentPlayer + 1) % len(game.Board.Players)
-	game, err = service.GameRepo.UpdateGame(game)
+
+	_, err = service.GameRepo.UpdateGame(game)
 	if err != nil {
 		return res, err
 	}
+
+	fmt.Printf("Moved pawn %d of player %d to position %d\n", req.PawnId, req.PlayerId, pawn.Position)
+
 	res = models.PawnMovementResponse{
-		GameId:   req.GameId,
-		PlayerId: req.PlayerId,
-		PawnId:   req.PawnId,
-		Position: newPosition,
+		GameId:        req.GameId,
+		PlayerId:      req.PlayerId,
+		CurrentPlayer: game.CurrentPlayer,
+		PawnId:        req.PawnId,
+		Position:      pawn.Position,
 	}
 	return res, nil
 }

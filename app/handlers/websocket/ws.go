@@ -17,7 +17,7 @@ import (
 )
 
 type WSMessage struct {
-	Action  string          `json:"action"`
+	Event   string          `json:"event"`
 	Payload json.RawMessage `json:"payload"`
 }
 
@@ -99,7 +99,7 @@ func InitWebsockets(w http.ResponseWriter, r *http.Request) {
 			log.Println("ReadMessage error:", err)
 			break
 		}
-		
+
 		var msg WSMessage
 		if err := json.Unmarshal(raw, &msg); err != nil {
 			log.Println("Unmarshal error:", err)
@@ -107,7 +107,7 @@ func InitWebsockets(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		switch msg.Action {
+		switch msg.Event {
 		case "join":
 			WsHandler.HandleRoomJoin(client)
 		case "dice_roll":
@@ -132,18 +132,18 @@ func InitWebsockets(w http.ResponseWriter, r *http.Request) {
 
 			for _, c := range Rooms[client_rooms[chatMessage.UserId]].Clients {
 				c.Conn.WriteJSON(map[string]interface{}{
-					"event":   "chat",
-					"message": chatMessage.Message,
-					"userId":  chatMessage.UserId,
-					"gameId":  chatMessage.GameId,
+					"event":    "chat",
+					"message":  chatMessage.Message,
+					"userId":   chatMessage.UserId,
+					"gameId":   chatMessage.GameId,
 					"playerId": chatMessage.PlayerId,
 				})
 			}
-			
+
 		default:
-			log.Println("Unknown action:", msg.Action)
+			log.Println("Unknown event:", msg.Event)
 			conn.WriteJSON(map[string]interface{}{
-				"message": fmt.Sprint("Unknown action", msg.Action),
+				"message": fmt.Sprint("Unknown event", msg.Event),
 			})
 		}
 	}
