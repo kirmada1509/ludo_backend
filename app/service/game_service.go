@@ -5,6 +5,8 @@ import (
 	"ludo_backend/app/repository"
 	models "ludo_backend/models/game_models"
 	helpers "ludo_backend/utils/helpers"
+
+	"github.com/google/uuid"
 )
 
 type GameService struct {
@@ -19,7 +21,7 @@ func NewGameService(gameRepo *repository.GameRepository) *GameService {
 
 func (service GameService) CreateGame(roomId string, creator string, uids []string) (models.Game, error) {
 	var game models.Game
-	game.GameID = roomId + "_" + creator
+	game.GameID = uuid.New().String()
 	game.RoomId = roomId
 	game.CurrentPlayer = 0
 	game.DiceResult = 0
@@ -30,10 +32,10 @@ func (service GameService) CreateGame(roomId string, creator string, uids []stri
 			PlayerId: index,
 			Color:    helpers.GetColor(index),
 			Pawns: []models.Pawn{
-				{Id: 0, Color: helpers.GetColor(index), Position: 0},
-				{Id: 1, Color: helpers.GetColor(index), Position: 0},
-				{Id: 2, Color: helpers.GetColor(index), Position: 0},
-				{Id: 3, Color: helpers.GetColor(index), Position: 0},
+				{Id: uid + "0", Index: 0, Color: helpers.GetColor(index), HomePathIndex: helpers.GetHomePosition(index), CurrentPathIndex: helpers.GetHomePosition((index)), IsInHome: true},
+				{Id: uid + "1", Index: 1, Color: helpers.GetColor(index), HomePathIndex: helpers.GetHomePosition(index), CurrentPathIndex: helpers.GetHomePosition((index)), IsInHome: true},
+				{Id: uid + "2", Index: 2, Color: helpers.GetColor(index), HomePathIndex: helpers.GetHomePosition(index), CurrentPathIndex: helpers.GetHomePosition((index)), IsInHome: true},
+				{Id: uid + "3", Index: 3, Color: helpers.GetColor(index), HomePathIndex: helpers.GetHomePosition(index), CurrentPathIndex: helpers.GetHomePosition((index)), IsInHome: true},
 			},
 		}
 		players = append(players, player)
@@ -84,8 +86,8 @@ func (service GameService) HandlePawnMovement(req models.PawnMovementRequest) (m
 		return res, fmt.Errorf("it's not your turn, current player is %d", game.CurrentPlayer)
 	}
 
-	pawn := &game.Board.Players[req.PlayerId].Pawns[req.PawnId]
-	pawn.Position += game.DiceResult
+	pawn := &game.Board.Players[req.PlayerId].Pawns[req.PawnIndex]
+	pawn.CurrentPathIndex += game.DiceResult
 
 	game.AllowMovement = false
 	game.CurrentPlayer = (game.CurrentPlayer + 1) % len(game.Board.Players)
@@ -95,14 +97,14 @@ func (service GameService) HandlePawnMovement(req models.PawnMovementRequest) (m
 		return res, err
 	}
 
-	fmt.Printf("Moved pawn %d of player %d to position %d\n", req.PawnId, req.PlayerId, pawn.Position)
+	fmt.Printf("Moved pawn %d of player %d to position %d\n", req.PawnIndex, req.PlayerId, pawn.CurrentPathIndex)
 
 	res = models.PawnMovementResponse{
 		GameId:        req.GameId,
 		PlayerId:      req.PlayerId,
 		CurrentPlayer: game.CurrentPlayer,
-		PawnId:        req.PawnId,
-		Position:      pawn.Position,
+		PawnIndex:     pawn.Index,
+		PathIndex:     pawn.CurrentPathIndex,
 	}
 	return res, nil
 }

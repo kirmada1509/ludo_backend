@@ -12,6 +12,7 @@ import (
 
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -156,7 +157,7 @@ func getAvailableRoom(Rooms map[string]*Room, client *Client) *Room {
 		}
 	}
 	room := Room{
-		ID:      fmt.Sprint(len(Rooms) + 1),
+		ID:      uuid.New().String(),
 		Clients: map[string]*Client{},
 	}
 	Rooms[room.ID] = &room

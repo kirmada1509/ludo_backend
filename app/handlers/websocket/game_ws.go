@@ -1,9 +1,9 @@
 package websocket
 
 import (
-	"fmt"
 	"log"
-	models "ludo_backend/models/game_models"
+	api_models "ludo_backend/models/api_models"
+	game_models "ludo_backend/models/game_models"
 	game_constants "ludo_backend/utils/constants"
 )
 
@@ -19,14 +19,15 @@ func (handler WebsocketHandler) HandleRoomJoin(client *Client) {
 		}
 		game, err := handler.GameService.CreateGame(room.ID, client.ID, userIds)
 		if err != nil {
+			resp := api_models.WebSocketResponse{
+				Success: false,
+				Event:   "game_started",
+				Error: &api_models.WSError{
+					Message: "Error creating game: " + err.Error(),
+				},
+			}
 			for _, c := range room.Clients {
-				c.Conn.WriteJSON(map[string]interface{}{
-					"event": "error",
-					"payload": map[string]interface{}{
-						"message": "Error creating game: " + err.Error(),
-						"roomId":  room.ID,
-					},
-				})
+				c.Conn.WriteJSON(resp)
 			}
 			return
 		}
@@ -34,76 +35,80 @@ func (handler WebsocketHandler) HandleRoomJoin(client *Client) {
 		room.Game = game
 		game_rooms[game.GameID] = room.ID
 
-		for i, c := range room.Clients {
-			c.Conn.WriteJSON(map[string]interface{}{
-				"event": "game_started",
-				"payload": map[string]interface{}{
-					"roomId": room.ID,
-					"game":   game,
-					"player_id": i,
+		for player_id, c := range room.Clients {
+			resp := api_models.WebSocketResponse{
+				Success: true,
+				Event:   "game_started",
+				Payload: map[string]interface{}{
+					"player_id": player_id,
+					"game":      game,
 				},
-			})
+			}
+			c.Conn.WriteJSON(resp)
 		}
 	} else {
-		// playerNames := make([]string, 0)
-		// for id := range room.Clients {
-		// 	playerNames = append(playerNames, id)
-		// }
-		client.Conn.WriteJSON(map[string]interface{}{
-			"event": "waiting",
-			"payload": map[string]interface{}{
-				"roomId":  room.ID,
-				"player_id": len(room.Clients) - 1,
+		resp := api_models.WebSocketResponse{
+			Success: true,
+			Event:   "waiting",
+			Payload: map[string]interface{}{
+				"room_id": room.ID,
+				"players": len(room.Clients) - 1,
 			},
-		})
+		}
+		client.Conn.WriteJSON(resp)
 	}
 }
 
-func (handler WebsocketHandler) HandleDiceRoll(req models.DiceRollRequest) {
+func (handler WebsocketHandler) HandleDiceRoll(req game_models.DiceRollRequest) {
 	diceResult, err := handler.GameService.HandleDiceRoll(req)
 	if err != nil {
-		clients[req.UserId].Conn.WriteJSON(map[string]interface{}{
-			"event": "dice_roll",
-			"payload": map[string]interface{}{
-				"success": false,
-				"message": "Error handling dice roll: " + err.Error(),
+		resp := api_models.WebSocketResponse{
+			Success: false,
+			Event:   "dice_roll",
+			Error: &api_models.WSError{
+				Message: "Dice roll failed: " + err.Error(),
 			},
-		})
+		}
+		clients[req.UserId].Conn.WriteJSON(resp)
 		return
 	}
-	fmt.Println("Dice rolled:", diceResult)
+
+	resp := api_models.WebSocketResponse{
+		Success: true,
+		Event:   "dice_roll",
+		Payload: map[string]interface{}{
+			"dice_result": diceResult,
+		},
+	}
 	for _, c := range Rooms[game_rooms[req.GameId]].Clients {
-		c.Conn.WriteJSON(map[string]interface{}{
-			"event": "dice_roll",
-			"payload": map[string]interface{}{
-				"success":     true,
-				"dice_result": diceResult,
-				"current_player": req.PlayerId,
-			},
-		})
+		c.Conn.WriteJSON(resp)
 	}
 }
 
-func (handler WebsocketHandler) HandlePawnMovement(req models.PawnMovementRequest) {
-	resp, err := handler.GameService.HandlePawnMovement(req)
+func (handler WebsocketHandler) HandlePawnMovement(req game_models.PawnMovementRequest) {
+	movementResp, err := handler.GameService.HandlePawnMovement(req)
 	if err != nil {
 		log.Println("Error handling pawn movement:", err)
-		clients[req.UserId].Conn.WriteJSON(map[string]interface{}{
-			"event": "pawn_movement",
-			"payload": map[string]interface{}{
-				"success": false,
-				"message": "Error handling pawn movement: " + err.Error(),
+		resp := api_models.WebSocketResponse{
+			Success: false,
+			Event:   "pawn_movement",
+			Error: &api_models.WSError{
+				Message: "Pawn movement failed: " + err.Error(),
 			},
-		})
+		}
+		clients[req.UserId].Conn.WriteJSON(resp)
 		return
 	}
 
+	resp := api_models.WebSocketResponse{
+		Success: true,
+		Event:   "pawn_movement",
+		Payload: map[string]interface{}{
+			"movement": movementResp,
+		},
+	}
+
 	for _, c := range Rooms[game_rooms[req.GameId]].Clients {
-		c.Conn.WriteJSON(map[string]interface{}{
-			"event": "pawn_movement",
-			"payload": map[string]interface{}{
-				"movement": resp,
-			},
-		})
+		c.Conn.WriteJSON(resp)
 	}
 }

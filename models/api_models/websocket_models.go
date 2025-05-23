@@ -1,13 +1,13 @@
 package models
 
-import "github.com/gorilla/websocket"
-
-type WebSocketClient struct {
-	ID   string
-	Conn *websocket.Conn
+type WebSocketResponse struct {
+	Success bool        `json:"success"`
+	Event   string      `json:"event"`
+	Payload interface{} `json:"payload,omitempty"`
+	Error   *WSError    `json:"error,omitempty"`
 }
 
-type WebSocketRoom struct {
-	ID      int
-	Clients []*WebSocketClient
+type WSError struct {
+	Message string `json:"message"`
+	Code    string `json:"code,omitempty"`
 }

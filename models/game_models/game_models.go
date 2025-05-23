@@ -21,23 +21,26 @@ type Player struct {
 }
 
 type Pawn struct {
-	Id       int    `json:"id" bson:"id"`
-	Color    string `json:"color" bson:"color"` // r g b y
-	Position int    `json:"position" bson:"position"`
+	Id               string `json:"id" bson:"id"`
+	Index            int    `json:"index" bson:"index"`
+	Color            string `json:"color" bson:"color"` // r g b y
+	HomePathIndex    int    `json:"home_path_index" bson:"home_path_index"`
+	CurrentPathIndex int    `json:"current_index" bson:"current_index"`
+	IsInHome         bool   `json:"is_in_home" bson:"is_in_home"`
 }
 
 type PawnMovementRequest struct {
-	UserId   string `json:"user_id" bson:"user_id"`
-	GameId   string `json:"game_id" bson:"game_id"`
-	PlayerId int    `json:"player_id" bson:"player_id"`
-	PawnId   int    `json:"pawn_id" bson:"pawn_id"`
+	UserId    string `json:"user_id" bson:"user_id"`
+	GameId    string `json:"game_id" bson:"game_id"`
+	PlayerId  int    `json:"player_id" bson:"player_id"`
+	PawnIndex int    `json:"pawn_id" bson:"pawn_id"`
 }
 type PawnMovementResponse struct {
 	GameId        string `json:"game_id" bson:"game_id"`
 	PlayerId      int    `json:"player_id" bson:"player_id"`
 	CurrentPlayer int    `json:"current_player" bson:"current_player"`
-	PawnId        int    `json:"pawn_id" bson:"pawn_id"`
-	Position      int    `json:"position" bson:"position"`
+	PawnIndex     int    `json:"pawn_index" bson:"pawn_index"`
+	PathIndex     int    `json:"new_path_index" bson:"new_path_index"`
 }
 
 type DiceRollRequest struct {
