@@ -35,12 +35,11 @@ func (handler WebsocketHandler) HandleRoomJoin(client *Client) {
 		room.Game = game
 		game_rooms[game.GameID] = room.ID
 
-		for player_id, c := range room.Clients {
+		for _, c := range room.Clients {
 			resp := api_models.WebSocketResponse{
 				Success: true,
 				Event:   "game_started",
 				Payload: map[string]interface{}{
-					"player_id": player_id,
 					"game":      game,
 				},
 			}
@@ -52,7 +51,7 @@ func (handler WebsocketHandler) HandleRoomJoin(client *Client) {
 			Event:   "waiting",
 			Payload: map[string]interface{}{
 				"room_id": room.ID,
-				"players": len(room.Clients) - 1,
+				"player_id": len(room.Clients) - 1,
 			},
 		}
 		client.Conn.WriteJSON(resp)

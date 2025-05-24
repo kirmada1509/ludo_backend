@@ -78,14 +78,6 @@ func InitWebsockets(w http.ResponseWriter, r *http.Request) {
 		delete(Rooms[client_rooms[userId]].Clients, userId)
 		delete(client_rooms, userId)
 		delete(clients, userId)
-
-		for _, c := range Rooms[client_rooms[userId]].Clients {
-			c.Conn.WriteJSON(map[string]interface{}{
-				"message": "User disconnected",
-				"userId":  userId,
-				"users":   len(Rooms[client_rooms[userId]].Clients),
-			})
-		}
 	}()
 
 	client := &Client{

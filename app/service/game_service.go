@@ -32,10 +32,10 @@ func (service GameService) CreateGame(roomId string, creator string, uids []stri
 			PlayerId: index,
 			Color:    helpers.GetColor(index),
 			Pawns: []models.Pawn{
-				{Id: uid + "0", Index: 0, Color: helpers.GetColor(index), HomePathIndex: helpers.GetHomePosition(index), CurrentPathIndex: helpers.GetHomePosition((index)), IsInHome: true},
-				{Id: uid + "1", Index: 1, Color: helpers.GetColor(index), HomePathIndex: helpers.GetHomePosition(index), CurrentPathIndex: helpers.GetHomePosition((index)), IsInHome: true},
-				{Id: uid + "2", Index: 2, Color: helpers.GetColor(index), HomePathIndex: helpers.GetHomePosition(index), CurrentPathIndex: helpers.GetHomePosition((index)), IsInHome: true},
-				{Id: uid + "3", Index: 3, Color: helpers.GetColor(index), HomePathIndex: helpers.GetHomePosition(index), CurrentPathIndex: helpers.GetHomePosition((index)), IsInHome: true},
+				{PawnId: uid + "0", Index: 0, Color: helpers.GetColor(index), HomePathIndex: helpers.GetHomePosition(index), CurrentPathIndex: helpers.GetHomePosition((index)), IsInHome: true},
+				{PawnId: uid + "1", Index: 1, Color: helpers.GetColor(index), HomePathIndex: helpers.GetHomePosition(index), CurrentPathIndex: helpers.GetHomePosition((index)), IsInHome: true},
+				{PawnId: uid + "2", Index: 2, Color: helpers.GetColor(index), HomePathIndex: helpers.GetHomePosition(index), CurrentPathIndex: helpers.GetHomePosition((index)), IsInHome: true},
+				{PawnId: uid + "3", Index: 3, Color: helpers.GetColor(index), HomePathIndex: helpers.GetHomePosition(index), CurrentPathIndex: helpers.GetHomePosition((index)), IsInHome: true},
 			},
 		}
 		players = append(players, player)
@@ -105,6 +105,7 @@ func (service GameService) HandlePawnMovement(req models.PawnMovementRequest) (m
 		CurrentPlayer: game.CurrentPlayer,
 		PawnIndex:     pawn.Index,
 		PathIndex:     pawn.CurrentPathIndex,
+		PawnId:        pawn.PawnId,
 	}
 	return res, nil
 }
